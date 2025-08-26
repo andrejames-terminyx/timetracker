@@ -93,7 +93,7 @@ def hr_dashboard(request):
     active_sessions = TimeLog.objects.filter(is_active=True).count()
     hr_users = UserProfile.objects.filter(role='hr').count()
     
-    return render(request, 'tracker/hr_dashboard.html', {
+    return render(request, 'hr/hr_dashboard.html', {
         'users': users,
         'search_query': search_query,
         'total_users': total_users,
@@ -132,7 +132,7 @@ def add_user(request):
         except Exception as e:
             messages.error(request, f'Error creating user: {str(e)}')
     
-    return render(request, 'tracker/add_user.html')
+    return render(request, 'hr/add_user.html')
 
 @login_required
 @user_passes_test(is_hr_user, login_url='/dashboard/')
@@ -174,7 +174,7 @@ def edit_user(request, user_id):
         except Exception as e:
             messages.error(request, f'Error updating user: {str(e)}')
     
-    return render(request, 'tracker/edit_user.html', {
+    return render(request, 'hr/edit_user.html', {
         'user_obj': user,
         'profile': profile
     })
@@ -195,7 +195,7 @@ def delete_user(request, user_id):
         messages.success(request, f'User {username} deleted successfully!')
         return redirect('hr_dashboard')
     
-    return render(request, 'tracker/delete_user.html', {'user_obj': user})
+    return render(request, 'hr/delete_user.html', {'user_obj': user})
 
 @login_required
 @user_passes_test(is_hr_user, login_url='/dashboard/')
