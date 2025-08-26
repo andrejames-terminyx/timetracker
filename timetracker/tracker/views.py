@@ -22,7 +22,7 @@ def is_hr_user(user):
     if not user.is_authenticated:
         return False
     try:
-        return user.userprofile.is_hr
+        return user.userprofile.role == 'hr'  # Change this line
     except UserProfile.DoesNotExist:
         return False
 
@@ -69,7 +69,7 @@ def dashboard(request):
 @user_passes_test(is_hr_user, login_url='/dashboard/')
 def hr_dashboard(request):
     # Get all users except superusers
-    users = User.objects.filter(is_superuser=False).select_related('userprofile')
+    users = User.objects.all().select_related('userprofile')
     
     # Search functionality
     search_query = request.GET.get('search', '')
@@ -78,7 +78,9 @@ def hr_dashboard(request):
             Q(username__icontains=search_query) |
             Q(first_name__icontains=search_query) |
             Q(last_name__icontains=search_query) |
-            Q(email__icontains=search_query)
+            Q(email__icontains=search_query) |
+            Q(userprofile__department__icontains=search_query) |
+            Q(userprofile__position__icontains=search_query)
         )
     
     # Pagination
@@ -87,7 +89,7 @@ def hr_dashboard(request):
     users = paginator.get_page(page_number)
     
     # Statistics
-    total_users = User.objects.filter(is_superuser=False).count()
+    total_users = User.objects.all().count()
     active_sessions = TimeLog.objects.filter(is_active=True).count()
     hr_users = UserProfile.objects.filter(role='hr').count()
     
@@ -135,8 +137,13 @@ def add_user(request):
 @login_required
 @user_passes_test(is_hr_user, login_url='/dashboard/')
 def edit_user(request, user_id):
-    user = get_object_or_404(User, id=user_id, is_superuser=False)
+    user = get_object_or_404(User, id=user_id)
     profile, created = UserProfile.objects.get_or_create(user=user)
+    
+    # Prevent HR users from editing other HR users
+    if is_hr_user(user) and user != request.user:
+        messages.error(request, 'You cannot edit other HR users.')
+        return redirect('hr_dashboard')
     
     if request.method == 'POST':
         try:
@@ -175,7 +182,12 @@ def edit_user(request, user_id):
 @login_required
 @user_passes_test(is_hr_user, login_url='/dashboard/')
 def delete_user(request, user_id):
-    user = get_object_or_404(User, id=user_id, is_superuser=False)
+    user = get_object_or_404(User, id=user_id)
+    
+    # Prevent HR users from deleting other HR users
+    if is_hr_user(user):
+        messages.error(request, 'You cannot delete HR users.')
+        return redirect('hr_dashboard')
     
     if request.method == 'POST':
         username = user.username
